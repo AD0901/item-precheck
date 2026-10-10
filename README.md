@@ -33,9 +33,14 @@ node server.js           # 本机访问 http://localhost:8787
 
 ## 远程访问
 
-`./start.sh` 会同时启动服务和 Cloudflare 隧道，终端里打印的 `https://….trycloudflare.com` 就是公网地址。需要先把 [cloudflared](https://github.com/cloudflare/cloudflared/releases) 放到 `bin/cloudflared`。
+运行 `./start.sh`，它会启动服务并打印两种地址：
 
-这个地址每次启动都会变；电脑休眠、关机或关闭终端后失效。工具没有访问口令，拿到链接的人都能查看和修改数据，所以服务端对 AI 调用做了限流（`RATE_PER_IP_HOUR`、`RATE_GLOBAL_DAY`）。
+- **局域网地址** `http://本机IP:8787`：与这台电脑在同一网络（同一个 Wi-Fi、同一校园网段）的人可以直接访问。由 `.env` 里的 `HOST=0.0.0.0` 控制。
+- **公网地址** `https://….trycloudflare.com`：需要先把 [cloudflared](https://github.com/cloudflare/cloudflared/releases) 放到 `bin/cloudflared`，并且当前网络能直连 Cloudflare。这个地址每次启动都会变。
+
+电脑休眠、关机或关闭终端后，两种地址都会失效。工具没有访问口令，能打开链接的人都能查看和修改数据，所以服务端对 AI 调用做了限流（`RATE_PER_IP_HOUR`、`RATE_GLOBAL_DAY`）。
+
+如果公网链接建立失败：在开着代理软件（如 Clash）的电脑上，cloudflared 的 DNS 查询常被拦截。可以换一个网络再试，或改用需要注册账号的国内内网穿透服务（cpolar、natapp 等），把它指向 `http://localhost:8787` 即可。
 
 ## 数据格式
 
