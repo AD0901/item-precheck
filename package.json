@@ -1,0 +1,8 @@
+{
+  "name": "item-precheck",
+  "version": "1.0.0",
+  "description": "基于生成式人工智能的人机协同试题质量预检工作台",
+  "private": true,
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=20.12" }
+}

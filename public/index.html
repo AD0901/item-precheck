@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>body{margin:0}[hidden]{display:none!important}</style>
+<title>试题质量预检工作台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: 研究型工具 — 顶部标识 + 四个页签；预检页左右双栏（试题 | 预检报告），复核页为逐项对照表，窄屏堆叠 */
+:root{
+  --bg:#f5f6f4; --surface:#ffffff; --sunk:#eceeea; --line:#d8dcd5;
+  --fg:#1d2420; --muted:#5d675f; --accent:#1f5c4a; --accent-soft:#dcebe4; --on-accent:#ffffff;
+  --ok:#2e7d4f; --warn:#b7791f; --bad:#b23b2e; --ok-soft:#e1f0e6; --warn-soft:#f7ecd9; --bad-soft:#f6e1de;
+  --f-display:"Noto Serif SC","Songti SC","STSong",serif;
+  --f-body:-apple-system,"PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif;
+  --f-en:"Source Serif 4",Georgia,"Times New Roman",serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141917; --surface:#1c2320; --sunk:#232b27; --line:#334039;
+  --fg:#e5ebe7; --muted:#9daaa2; --accent:#7cc4a6; --accent-soft:#24392f; --on-accent:#0f1a15;
+  --ok:#6cc58f; --warn:#e3b35c; --bad:#ec8576; --ok-soft:#1f3527; --warn-soft:#3a2f1c; --bad-soft:#3d2421; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141917; --surface:#1c2320; --sunk:#232b27; --line:#334039;
+  --fg:#e5ebe7; --muted:#9daaa2; --accent:#7cc4a6; --accent-soft:#24392f; --on-accent:#0f1a15;
+  --ok:#6cc58f; --warn:#e3b35c; --bad:#ec8576; --ok-soft:#1f3527; --warn-soft:#3a2f1c; --bad-soft:#3d2421; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.65}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:20px;padding-block:28px 64px}
+header.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:18px}
+header.top>div{min-width:0}
+.eyebrow{font-size:12px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+h1{font-family:var(--f-display);font-size:clamp(21px,3vw,28px);line-height:1.35;margin:4px 0 2px;text-wrap:balance}
+.h1sub{font-family:var(--f-display);font-size:16px;color:var(--muted);margin:0 0 8px}
+.sub{color:var(--muted);margin:0;max-width:64ch}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:3px 10px;border-radius:999px;background:var(--sunk);color:var(--muted);border:1px solid var(--line);white-space:nowrap}
+.chip.ai-on{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+nav.tabs{display:flex;gap:4px;margin:18px 0 22px;overflow-x:auto;scrollbar-width:none}
+nav.tabs button{font:inherit;font-size:14px;border:0;background:none;color:var(--muted);padding:8px 14px;border-radius:8px;cursor:pointer;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{background:var(--surface);color:var(--fg);box-shadow:0 0 0 1px var(--line);font-weight:600}
+nav.tabs button b{font-family:var(--f-mono);font-weight:400;font-size:12px;margin-right:6px;color:var(--muted)}
+button:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h2{font-family:var(--f-display);font-size:19px;margin:0 0 4px}
+h3{font-size:15px;margin:0 0 8px}
+.muted{color:var(--muted)} .small{font-size:13px}
+.grid2{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:880px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px;min-width:0}
+.sticky{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}
+@media (max-width:880px){.sticky{position:static}}
+.stack{display:flex;flex-direction:column;gap:16px;min-width:0}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.between{justify-content:space-between}
+.btn{font:inherit;font-size:14px;border-radius:8px;padding:8px 16px;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+select{font:inherit;font-size:14px;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--fg);max-width:100%}
+textarea{width:100%;font-family:var(--f-body);font-size:14px;line-height:1.6;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--fg);resize:vertical}
+textarea.en{font-family:var(--f-en);font-size:14.5px}
+.passage{font-family:var(--f-en);font-size:15.5px;line-height:1.7;background:var(--sunk);border-radius:10px;padding:16px 18px;max-height:300px;overflow-y:auto}
+.passage h4{font-family:var(--f-en);font-size:17px;margin:0 0 10px}
+.passage p{margin:0 0 10px}.passage p:last-child{margin:0}
+.pn{font-family:var(--f-mono);font-size:11px;color:var(--muted);margin-right:6px}
+.items{display:flex;flex-direction:column;gap:2px}
+.item{display:grid;grid-template-columns:2em minmax(0,1fr) auto;gap:8px;align-items:baseline;text-align:left;font:inherit;border:0;background:none;color:var(--fg);padding:8px 10px;border-radius:8px;cursor:pointer;width:100%}
+.item:hover{background:var(--sunk)}
+.item[aria-current="true"]{background:var(--accent-soft)}
+.item .n{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.item .t{font-family:var(--f-en);font-size:14.5px;line-height:1.45}
+.opts{font-family:var(--f-en);font-size:14.5px;display:grid;gap:4px;margin:4px 0 0}
+.opts>span{padding:4px 8px;border-radius:6px;display:block}
+.opts>span.key{background:var(--ok-soft)}
+.tag{font-family:var(--f-mono);font-size:11px;padding:1px 6px;border-radius:4px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.tag.big{font-size:13px;padding:3px 10px;font-family:var(--f-body)}
+.pill{font-size:12px;padding:2px 9px;border-radius:999px;white-space:nowrap;display:inline-block}
+.p-ok{background:var(--ok-soft);color:var(--ok)} .p-warn{background:var(--warn-soft);color:var(--warn)} .p-bad{background:var(--bad-soft);color:var(--bad)} .p-n{background:var(--sunk);color:var(--muted)}
+.sec{border-top:1px solid var(--line);padding-top:12px}
+.sec h3{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:6px}
+.sec p{margin:0 0 4px;font-size:14px}
+.kv{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.track{position:relative;height:12px;background:var(--sunk);border-radius:6px;overflow:hidden}
+.fill{position:absolute;inset:0 auto 0 0;border-radius:6px;background:var(--accent);transition:width .4s ease}
+.track .th{position:absolute;top:0;bottom:0;width:1px;background:var(--muted);opacity:.55}
+.scale{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);font-family:var(--f-mono)}
+.bars{display:flex;flex-direction:column;gap:10px}
+.bar{display:grid;grid-template-columns:7.5em minmax(0,1fr) 3.2em;gap:10px;align-items:center}
+.bar .lbl{font-size:14px}.bar .lbl b{font-family:var(--f-mono);font-weight:500;color:var(--muted);margin-right:4px;font-size:12px}
+.val{font-family:var(--f-mono);font-size:13px;text-align:right;font-variant-numeric:tabular-nums}
+.note{font-size:12.5px;color:var(--muted);background:var(--sunk);border-radius:8px;padding:8px 12px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.kpi .k{font-size:12px;color:var(--muted)}
+.kpi .v{font-family:var(--f-mono);font-size:24px;font-variant-numeric:tabular-nums;line-height:1.3}
+.kpi .d{font-size:12px;color:var(--muted)}
+.scroll-x{overflow-x:auto}
+table.t{border-collapse:collapse;width:100%;font-size:14px}
+table.t th,table.t td{border-bottom:1px solid var(--line);padding:8px 8px;text-align:left;vertical-align:middle}
+table.t th{font-size:12px;font-weight:500;color:var(--muted);white-space:nowrap}
+table.t td.num,table.t th.num{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+table.t tbody tr.sel{background:var(--accent-soft)}
+table.t tbody tr.click{cursor:pointer}
+table.rv td:nth-child(2){min-width:220px}
+table.rv td:first-child{white-space:nowrap;font-weight:600}
+.diff{font-family:var(--f-mono);font-size:12px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg label{padding:7px 16px;font-size:14px;cursor:pointer;border-left:1px solid var(--line)}
+.seg label:first-child{border-left:0}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label:has(input:checked){background:var(--accent);color:var(--on-accent);font-weight:600}
+.seg label:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:-2px}
+.flow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;counter-reset:s}
+@media (max-width:820px){.flow{grid-template-columns:minmax(0,1fr)}}
+.step{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;counter-increment:s}
+.step::before{content:counter(s);font-family:var(--f-mono);font-size:12px;color:var(--on-accent);background:var(--accent);border-radius:50%;width:22px;height:22px;display:inline-grid;place-items:center;margin-bottom:8px}
+.step h3{margin:0 0 4px}.step p{margin:0;font-size:13.5px;color:var(--muted)}
+.step .who{font-size:12px;color:var(--accent);margin-top:8px;display:block}
+.cols2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:720px){.cols2{grid-template-columns:minmax(0,1fr)}}
+ul.plain{margin:0;padding-left:1.1em}ul.plain li{margin-bottom:6px}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}.fill{transition:none}}
+svg text{font-family:var(--f-mono);font-size:11px;fill:var(--muted)}
+footer{margin-top:40px;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
+.track .band{position:absolute;top:0;bottom:0;background:var(--accent-soft)}
+.cover{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px}
+.cv{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:center;padding:5px 8px;border-radius:8px;background:var(--sunk);font-size:13.5px}
+.cv .kv{font-size:12px;color:var(--muted)}
+.cv.one{background:var(--warn-soft)}.cv.one .kv{color:var(--warn)}
+.cv.zero{background:var(--bad-soft)}.cv.zero .kv{color:var(--bad);font-weight:600}
+.bar.wide{grid-template-columns:13.5em minmax(0,1fr) 3.6em}
+@media (max-width:520px){.bar.wide{grid-template-columns:minmax(0,1fr) 3.6em}.bar.wide .track{grid-column:1/-1;grid-row:2}}
+table.t td{vertical-align:top}
+.chip.bad{background:var(--bad-soft);color:var(--bad);border-color:transparent}
+input[type=text]{width:100%;font:inherit;font-size:14px;padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+#flash{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);z-index:5;font-size:13px;padding:6px 14px}
+</style>
+</head>
+<body>
+
+
+<div class="wrap" id="boot"><p class="muted">正在加载…</p></div>
+<span class="chip" id="flash" hidden></span>
+<div class="wrap" id="app" hidden>
+  <header class="top">
+    <div>
+      <div class="eyebrow">课题原型 · 大学英语四级阅读试题</div>
+      <h1>基于生成式人工智能的人机协同试题质量预检机制研究</h1>
+      <p class="h1sub">申报人：段惠琼 教授（南昌航空大学外国语学院）</p>
+      <p class="sub">把申报人前期用有声思维和融合模型建立的九项阅读认知属性交给生成式 AI，在试题入库前做质量预检，再由命题专家逐项复核，最后用作答数据检验预检结论。</p>
+    </div>
+    <div class="row">
+      <span class="chip" id="setChip"></span>
+      <span class="chip" id="aiChip"><span class="dot"></span><span id="aiChipText"></span></span>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-tab="pre"><b>1</b>AI 预检工作台</button>
+    <button role="tab" aria-selected="false" data-tab="rev"><b>2</b>专家复核</button>
+    <button role="tab" aria-selected="false" data-tab="val"><b>3</b>试测验证</button>
+    <button role="tab" aria-selected="false" data-tab="arch">研究基础与创新</button>
+  </nav>
+
+  <!-- 1 预检工作台 -->
+  <section data-view="pre">
+    <div class="grid2">
+      <div class="stack">
+        <div class="panel stack">
+          <div class="row between">
+            <h2>待检试题</h2>
+            <select id="srcSel" aria-label="题组"></select>
+          </div>
+          <div id="setBox" class="stack">
+            <article class="passage" id="passage"></article>
+            <div class="items" id="itemList"></div>
+          </div>
+          <div id="newBox" class="stack" hidden>
+            <p class="small muted" style="margin:0">贴入一段材料和一道四选一题，AI 会按九属性框架给出完整预检报告。结果只显示一次，不保存。</p>
+            <textarea class="en" id="newItem" rows="10" aria-label="新题目"></textarea>
+          </div>
+          <div id="createBox" class="stack" hidden>
+            <p class="small muted" style="margin:0">新建的题组保存在服务器上，所有访问者都能看到、预检和复核。</p>
+            <label class="f" for="cTitle">题组名称<input type="text" id="cTitle" maxlength="100" placeholder="例如：2016 年 12 月四级第三套 仔细阅读 Passage One"></label>
+            <label class="f" for="cPTitle">文章标题（可不填）<input type="text" id="cPTitle" maxlength="200"></label>
+            <label class="f" for="cPassage">阅读材料（每段一行）<textarea class="en" id="cPassage" rows="8"></textarea></label>
+            <label class="f" for="cItems">试题（按下面的格式，每题含四个选项和一行答案）<textarea class="en" id="cItems" rows="12"></textarea></label>
+            <div class="row"><button class="btn primary" id="createBtn">创建题组</button></div>
+            <div class="note" id="createNote" hidden></div>
+          </div>
+          <div class="row" id="runRow">
+            <button class="btn primary" id="runBtn">预检这道题</button>
+            <button class="btn" id="runAllBtn">预检全部未检题</button>
+            <span class="small muted" id="runHint"></span>
+          </div>
+        </div>
+        <div class="panel stack" style="gap:10px">
+          <div>
+            <h3 style="margin:0">题组属性覆盖</h3>
+            <p class="small muted" style="margin:0">按 AI 标定统计九项属性各被几道题考查。未覆盖的属性无法诊断，覆盖过少的属性诊断不稳。</p>
+          </div>
+          <div class="cover" id="cover"></div>
+        </div>
+      </div>
+
+      <div class="panel stack sticky" id="report"></div>
+    </div>
+  </section>
+
+  <!-- 2 专家复核 -->
+  <section data-view="rev" hidden>
+    <div class="stack">
+      <div>
+        <h2>人机一致性</h2>
+        <p class="muted small" style="margin:0">把专家判断与 AI 预检意见逐项比对，用 Cohen's Kappa 扣除随机一致的部分。下方修改任何一项，系数实时更新。复核结果自动保存到服务器。</p>
+      </div>
+      <div class="kpis" id="kappaKpis"></div>
+      <div class="grid2">
+        <div class="panel stack">
+          <div class="row between">
+            <h3 style="margin:0">题组复核进度</h3>
+            <span class="small muted">点一行切换试题</span>
+          </div>
+          <div class="scroll-x"><table class="t" id="ovTable"></table></div>
+        </div>
+        <div class="panel stack" id="revPanel"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 试测验证 -->
+  <section data-view="val" hidden>
+    <div class="stack">
+      <div>
+        <h2>试测验证</h2>
+        <p class="muted small" style="margin:0">用实测正确率检验 AI 预估难度，用认知诊断模型（DINA）的题目区分度检验 Q 矩阵标定。</p>
+      </div>
+      <div class="panel stack" style="gap:10px">
+        <div class="row between"><h3 style="margin:0">作答数据</h3><span class="small muted" id="respInfo"></span></div>
+        <p class="small muted" style="margin:0" id="respFmt"></p>
+        <textarea id="respText" rows="4" aria-label="作答数据" placeholder="从 Excel 复制粘贴，或选择 CSV 文件" style="font-family:var(--f-mono);font-size:13px"></textarea>
+        <div class="row"><button class="btn primary" id="respBtn">导入并替换现有数据</button><input type="file" id="respFile" accept=".csv,.txt,text/csv,text/plain" class="small"></div>
+        <div class="note" id="respNote" hidden></div>
+      </div>
+      <p class="muted" id="valEmpty" hidden></p>
+      <div class="stack" id="valBody">
+      <div class="kpis" id="valKpis"></div>
+      <div class="cols2">
+        <div class="panel">
+          <h3>AI 预估难度 与 实测正确率</h3>
+          <div id="scatter"></div>
+          <p class="small muted" style="margin:6px 0 0">点落在对角线上表示预估准确；虚线带为 ±0.15 容差，带外的题需回看预检依据。</p>
+        </div>
+        <div class="panel stack">
+          <div>
+            <h3>Q 矩阵标定检验</h3>
+            <p class="small muted" style="margin:0">区分度 = 掌握所需属性的学生正确率 − 未掌握学生的正确率。人机标定不同的题，分别按两种标定计算，区分度高的一方更符合数据。</p>
+          </div>
+          <div id="qCheck" class="stack" style="gap:12px"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>逐题验证结果与入库建议</h3>
+        <div class="scroll-x"><table class="t" id="valTable"></table></div>
+      </div>
+      <div class="panel">
+        <div class="cols2">
+          <div>
+            <h3>预检后试题的诊断应用</h3>
+            <p class="small muted" style="margin:0">通过预检、Q 矩阵经数据检验的试题，可以回到申报人前期的用途：诊断学生的阅读障碍并安排补救教学。右侧是用这组题和作答数据估计出的九项属性平均掌握率。这部分承接前期成果，不是本课题的重点。</p>
+          </div>
+          <div class="bars" id="classBars"></div>
+        </div>
+      </div>
+    </div>
+    </div>
+  </section>
+
+  <!-- 研究基础与创新 -->
+  <section data-view="arch" hidden>
+    <div class="stack">
+      <div>
+        <h2>预检机制流程</h2>
+        <p class="muted small" style="margin:0">AI 负责快速、全覆盖的初筛，专家负责裁决，作答数据负责事后检验。三者的分歧本身就是研究数据。</p>
+      </div>
+      <div class="flow">
+        <div class="step"><h3>命题</h3><p>命题人按考试大纲编写阅读材料与试题，或选取四级真题。</p><span class="who">命题人</span></div>
+        <div class="step"><h3>AI 预检</h3><p>按九属性框架标定属性，预估难度，检查答案唯一性、干扰项质量、超纲与偏题风险。</p><span class="who">生成式 AI</span></div>
+        <div class="step"><h3>专家复核</h3><p>逐项采纳或修改 AI 意见，计算 Kappa，给出通过、修改或退回结论。</p><span class="who">命题专家</span></div>
+        <div class="step"><h3>试测验证</h3><p>对比预估难度与实测正确率，用认知诊断模型检验 Q 矩阵。</p><span class="who">作答数据</span></div>
+        <div class="step"><h3>入库</h3><p>通过验证的试题带着属性、难度和复核记录进入题库。</p><span class="who">题库</span></div>
+      </div>
+
+      <div class="panel">
+        <h3>前期成果在本课题中的位置</h3>
+        <p class="small muted" style="margin:0 0 10px">申报人主持完成国家社科基金一般项目“基于认知诊断的大学英语阅读障碍及其教学补救措施研究”（13BYY087，成果为同名专著）和江西省教改课题“大学英语阅读障碍的认知诊断及补救教学”（JXJG-13-8-19）。本课题的每个环节都直接建立在这些成果上。</p>
+        <div class="scroll-x"><table class="t" id="baseTable"></table></div>
+      </div>
+
+      <div class="cols2">
+        <div class="panel">
+          <h3>创新之处</h3>
+          <ul class="plain">
+            <li><strong>视角前移</strong>：前期研究用认知诊断在考后诊断学生；本课题把同一套属性框架前移到命题环节，在考前预检试题，认知诊断模型转而承担事后检验预检结论的角色。</li>
+            <li><strong>有实证根基的属性框架约束 AI</strong>：交给 AI 的九项属性来自 32 名学生的有声思维报告，并经融合模型检验，90% 的学生认可据此作出的诊断。AI 是在已验证的框架内作判断，不是自由发挥。</li>
+            <li><strong>三方互证</strong>：AI 意见、专家判断、作答数据两两比对。人机一致性用 Kappa 量化，人机分歧交给作答数据裁决，可以回答“AI 在哪些维度可信”这一尚无定论的问题。</li>
+            <li><strong>回应综述指出的难题</strong>：申报人 2020 年的综述指出，Q 矩阵标定依赖多学科专家、结果因人而异，同一研究者前后也可能不一致。让 AI 先标、专家复核，是对这一难题的直接尝试。</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h3>与指南选题的契合</h3>
+          <ul class="plain">
+            <li><strong>对象契合</strong>：指南关注试题质量预检；阅读理解是大规模英语考试中分值最高、命题最难把关的题型，申报人已对四级阅读做过系统的认知分析。</li>
+            <li><strong>方法契合</strong>：“人机协同”不停留在流程设想上。专家一侧有现成的八套四级真题属性标注可作参照，一致性可以直接计算。</li>
+            <li><strong>可行性</strong>：使用公开真题和申报人任教班级的作答数据即可完成实证，不依赖考试机构内部数据；本工具已把预检、复核、验证三个环节跑通。</li>
+            <li><strong>政策依据</strong>：《深化新时代教育评价改革总体方案》（2020）提出利用人工智能、大数据等现代信息技术创新评价工具。</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>研究问题</h3>
+        <ul class="plain">
+          <li>在九属性框架下，生成式 AI 对四级阅读试题的属性标定与学科专家的一致性如何？九项属性中哪些标得准，哪些标不准？</li>
+          <li>AI 预估的难度与实测正确率的吻合程度如何？偏差大的试题有什么共同特征（例如干扰项迷惑性强、涉及语法知识）？</li>
+          <li>人机标定出现分歧时，作答数据更支持哪一方？据此如何划定 AI 初筛与专家裁决的分工边界？</li>
+        </ul>
+      </div>
+
+      <div class="cols2">
+        <div class="panel">
+          <h3>九项阅读认知属性</h3>
+          <p class="small muted" style="margin:0 0 8px">属性名称取自申报人专著；编号顺序和下面的简要说明是原型的工作表述，以专著中的定义为准。</p>
+          <div class="stack" id="attrDefs" style="gap:8px"></div>
+        </div>
+        <div class="panel">
+          <h3>预检的五个维度</h3>
+          <ul class="plain" id="dimDefs"></ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>示例题组的阅读材料与试题为仿大学英语四级阅读题型的原创示例，其专家判断与作答数据为示例或模拟，不是研究结果。自建题组的预检结果、复核结论和作答数据保存在服务器上，所有访问者共用。诊断参数：猜测率 g = 0.2，失误率 s = 0.1，先验均匀。</footer>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
