@@ -5,3 +5,8 @@ node_modules/
 *.log
 .DS_Store
 .claude/
+
+# 申报材料和演示页副本，不进仓库
+*.docx
+/item-precheck.html
+/试题质量预检工作台.html
